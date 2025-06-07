@@ -31,7 +31,7 @@ echo "✅ Unique data saved to ${UNIQUE_JSONL_FILE}"
 # --- 4. (可选) 运行 AI 增强脚本 ---
 # 确保它的输入是去重后的文件
 # echo "--- Step 3: Enhancing data with AI ---"
-# python ai/enhance.py --data ${UNIQUE_JSONL_FILE}
+python ai/enhance.py --data ${UNIQUE_JSONL_FILE}
 # echo "✅ AI enhancement complete."
 # # 如果你运行了 AI 增强，后续步骤的输入文件就需要改变
 # INPUT_FOR_MD=${ENHANCED_JSONL_FILE}
