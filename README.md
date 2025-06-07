@@ -1,5 +1,4 @@
 # 每日 ArXiv 论文摘要
-forked from dw-dengwei/daily-arXiv-ai-enhanced
 
 欢迎来到我的每日论文摘要项目！这里汇总了通过 AI 自动生成的论文报告。
 
