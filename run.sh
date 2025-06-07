@@ -6,6 +6,6 @@ cd ..
 python deduplicate.py data/${today}.jsonl
 
 cd ../to_md
-python convert.py --data ../data/${today}.jsonl
+python convert.py --data ../data/${today}_unique.jsonl
 
 python update_readme.py
