@@ -13,10 +13,27 @@ from langchain.prompts import (
   HumanMessagePromptTemplate,
 )
 from structure import Structure
-if os.path.exists('.env'):
-    dotenv.load_dotenv()
-template = open("template.txt", "r").read()
-system = open("system.txt", "r").read()
+# --- 1. 获取脚本所在的目录 ---
+# __file__ 是当前脚本的文件名
+# os.path.dirname() 获取该文件所在的目录路径
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# --- 2. 构造模板文件的绝对路径 ---
+# os.path.join() 会智能地将目录和文件名拼接成一个完整的路径
+template_path = os.path.join(script_dir, "template.txt")
+system_path = os.path.join(script_dir, "system.txt")
+
+# --- 3. 使用绝对路径打开文件 ---
+try:
+    with open(template_path, 'r', encoding='utf-8') as f:
+        template = f.read()
+    with open(system_path, 'r', encoding='utf-8') as f:
+        system = f.read()
+except FileNotFoundError as e:
+    print(f"❌ Error: Template file not found. Ensure 'template.txt' and 'system.txt' are in the same directory as enhance.py.", file=sys.stderr)
+    print(f"Details: {e}", file=sys.stderr)
+    sys.exit(1) # 发现错误后立即退出，避免后续错误
+
 
 def parse_args():
     """解析命令行参数"""
