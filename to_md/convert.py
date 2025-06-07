@@ -4,11 +4,13 @@ import os
 
 # in to_md/convert.py
 
+# in to_md/convert.py
+
 def format_paper_to_markdown(paper: dict) -> str:
     """
     将单个论文的字典数据，格式化成一段漂亮的 Markdown 文本。
     """
-    # ... (提取 title, authors, abs_url, pdf_url, categories 的代码保持不变) ...
+    # --- 提取基础信息 (这部分不变) ---
     title = paper.get("title", "No Title Provided").strip()
     authors = ", ".join(paper.get("authors", ["N/A"]))
     abs_url = paper.get("abs", "#")
@@ -17,11 +19,11 @@ def format_paper_to_markdown(paper: dict) -> str:
 
     ai_data = paper.get("AI", {})
 
-    # --- 新增：提取 TL;DR ---
-    # 使用 .get() 安全地获取 tldr，如果不存在则提供一个默认值
-    tldr_summary = ai_data.get("tldr", "AI summary not available.")
+    # --- 1. 新增：提取 TL;DR ---
+    # 安全地获取 tldr，如果不存在则显示一条提示信息
+    tldr_summary = ai_data.get("tldr", "AI one-sentence summary is not available.")
     
-    # --- 智能选择摘要 (这部分代码保持不变) ---
+    # --- 2. 智能选择摘要 (这部分不变) ---
     summary_to_display = ai_data.get("summary_zh")
     summary_title = "中文摘要 (Abstract in Chinese)"
     if not summary_to_display:
@@ -29,8 +31,11 @@ def format_paper_to_markdown(paper: dict) -> str:
         summary_title = "Abstract"
     summary_markdown = "> " + summary_to_display.replace("\n", " ").strip()
 
-    # --- 修改 f-string，加入 TL;DR 的展示部分 ---
+    # --- 3. 修改 f-string，加入 TL;DR 的展示部分 ---
+    # 我们将把 tldr 放在标题下方，作为一个醒目的引言
     return f"""### [{title}]({abs_url})
+
+**一句话总结:** {tldr_summary}
 
 **Authors:** {authors}
 **Categories:** {categories}
