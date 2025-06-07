@@ -3,7 +3,7 @@ cd daily_arxiv
 scrapy crawl arxiv -o ../data/${today}.jsonl
 
 cd ..
-python create_markdown.py data/${today}.jsonl
+python deduplicate.py data/${today}.jsonl
 
 cd ../to_md
 python convert.py --data ../data/${today}.jsonl
