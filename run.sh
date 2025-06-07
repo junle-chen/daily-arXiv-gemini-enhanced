@@ -33,12 +33,13 @@ echo "✅ Unique data saved to ${UNIQUE_JSONL_FILE}"
 # echo "--- Step 3: Enhancing data with AI ---"
 python ai/enhance.py --data ${UNIQUE_JSONL_FILE}
 # echo "✅ AI enhancement complete."
-# # 如果你运行了 AI 增强，后续步骤的输入文件就需要改变
-# INPUT_FOR_MD=${ENHANCED_JSONL_FILE}
+
 
 # --- 5. 运行 Markdown 生成脚本 ---
+# # 如果你运行了 AI 增强，后续步骤的输入文件就需要改变
+INPUT_FOR_MD=${ENHANCED_JSONL_FILE}
 # 如果你没有 AI 增强步骤，就用去重后的文件
-INPUT_FOR_MD=${UNIQUE_JSONL_FILE}
+#INPUT_FOR_MD=${UNIQUE_JSONL_FILE}
 
 echo "--- Step 4: Converting JSONL to Markdown ---"
 # 从根目录调用，并使用相对于根目录的路径
