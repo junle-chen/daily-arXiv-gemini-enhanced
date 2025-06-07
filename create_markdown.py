@@ -1,83 +1,74 @@
 import json
 import argparse
 import os
-from datetime import datetime
-
-def create_paper_markdown(paper: dict) -> str:
-    """
-    将单个论文的字典数据格式化为 Markdown 字符串。
-    """
-    # 安全地获取字段，如果字段不存在则返回空值
-    title = paper.get("title", "No Title Provided").strip()
-    abs_url = paper.get("abs", "#")
-    pdf_url = paper.get("pdf", "#")
-    authors = ", ".join(paper.get("authors", ["N/A"]))
-    categories = ", ".join([f"`{cat}`" for cat in paper.get("categories", [])])
-    # 移除摘要中可能存在的换行符，并用 blockquote 格式化
-    summary = "> " + paper.get("summary", "No summary available.").replace("\n", " ").strip()
-
-    # 使用 f-string 构建 Markdown 模板
-    return f"""### [{title}]({abs_url})
-
-**Authors:** {authors}
-
-**Categories:** {categories}
-
-[**[PDF]**]({pdf_url})
-
-#### Summary
-
-{summary}
-"""
 
 def main():
     """
-    主函数，负责读取 jsonl 文件并生成 markdown 文件。
+    读取一个 JSONL 文件，根据 'id' 字段去除重复行，
+    并将其写入新的输出文件。
     """
-    parser = argparse.ArgumentParser(description="Convert an ArXiv JSONL file to a formatted Markdown file.")
-    parser.add_argument("input_file", help="Path to the input .jsonl file")
+    parser = argparse.ArgumentParser(
+        description="Deduplicate a JSONL file based on the 'id' field."
+    )
+    parser.add_argument(
+        "input_file", 
+        help="Path to the input .jsonl file with duplicate entries."
+    )
+    parser.add_argument(
+        "-o", "--output", 
+        dest="output_file",
+        help="Path to the output .jsonl file. If not provided, a default name will be generated."
+    )
     args = parser.parse_args()
 
     input_path = args.input_file
+    
+    # 如果用户没有提供输出文件名，则自动生成一个
+    if args.output_file:
+        output_path = args.output_file
+    else:
+        # 例如: 'data/2025-06-07.jsonl' -> 'data/2025-06-07_unique.jsonl'
+        base, ext = os.path.splitext(input_path)
+        output_path = f"{base}_unique{ext}"
 
     if not os.path.exists(input_path):
-        print(f"Error: Input file not found at {input_path}")
+        print(f"❌ Error: Input file not found at '{input_path}'")
         return
 
-    papers = []
-    with open(input_path, 'r', encoding='utf-8') as f:
-        for line in f:
+    print(f"▶️  Reading from: {input_path}")
+
+    seen_ids = set()
+    unique_papers = []
+    total_lines = 0
+    duplicate_count = 0
+
+    with open(input_path, 'r', encoding='utf-8') as f_in:
+        for i, line in enumerate(f_in, 1):
+            total_lines += 1
             try:
-                papers.append(json.loads(line))
+                paper = json.loads(line)
+                paper_id = paper.get('id')
+
+                # 检查 paper_id 是否存在且未被记录
+                if paper_id and paper_id not in seen_ids:
+                    seen_ids.add(paper_id)
+                    unique_papers.append(paper)
+                else:
+                    duplicate_count += 1
+
             except json.JSONDecodeError:
-                print(f"Warning: Skipping malformed line: {line.strip()}")
+                print(f"⚠️ Warning: Skipping malformed JSON on line {i}: {line.strip()}")
+            except KeyError:
+                print(f"⚠️ Warning: Skipping line {i} due to missing 'id' field: {line.strip()}")
 
-    if not papers:
-        print("No papers found in the input file. Exiting.")
-        return
+    print(f"ℹ️  Processed {total_lines} lines. Found {len(unique_papers)} unique papers and {duplicate_count} duplicates.")
 
-    # 从输入文件名中提取日期
-    base_name = os.path.basename(input_path)
-    date_str = base_name.split('_')[0].split('.')[0]
-    
-    # 格式化文档标题
-    header = f"# Daily ArXiv Digest: {date_str}\n\n"
-    
-    # 为每篇论文生成 Markdown 内容
-    markdown_parts = [create_paper_markdown(paper) for paper in papers]
+    # 将去重后的内容写入新文件
+    with open(output_path, 'w', encoding='utf-8') as f_out:
+        for paper in unique_papers:
+            f_out.write(json.dumps(paper) + '\n')
 
-    # 将所有部分用分隔线连接起来
-    final_markdown = header + "---\n\n".join(markdown_parts)
-
-    # 定义输出文件名
-    output_file = input_path.replace('.jsonl', '.md')
-
-    # 写入最终的 Markdown 文件
-    with open(output_file, 'w', encoding='utf-8') as f:
-        f.write(final_markdown)
-
-    print(f"✅ Successfully converted {len(papers)} papers to {output_file}")
-
+    print(f"✅ Successfully saved unique papers to: {output_path}")
 
 if __name__ == "__main__":
     main()
