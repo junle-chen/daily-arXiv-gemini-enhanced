@@ -2,35 +2,34 @@ import json
 import argparse
 import os
 
+# in to_md/convert.py
+
 def format_paper_to_markdown(paper: dict) -> str:
     """
     将单个论文的字典数据，格式化成一段漂亮的 Markdown 文本。
-    它会智能地选择使用中文摘要还是英文摘要。
     """
-    # --- 安全地提取基础信息 ---
+    # ... (提取 title, authors, abs_url, pdf_url, categories 的代码保持不变) ...
     title = paper.get("title", "No Title Provided").strip()
     authors = ", ".join(paper.get("authors", ["N/A"]))
     abs_url = paper.get("abs", "#")
     pdf_url = paper.get("pdf", "#")
-    # 将分类格式化为代码块样式，更美观
     categories = ", ".join([f"`{cat}`" for cat in paper.get("categories", [])])
 
-    # --- 智能选择摘要 ---
-    # 首先尝试从 AI 增强字段中获取中文摘要
     ai_data = paper.get("AI", {})
-    summary_to_display = ai_data.get("summary_zh") # 尝试获取中文摘要
 
+    # --- 新增：提取 TL;DR ---
+    # 使用 .get() 安全地获取 tldr，如果不存在则提供一个默认值
+    tldr_summary = ai_data.get("tldr", "AI summary not available.")
+    
+    # --- 智能选择摘要 (这部分代码保持不变) ---
+    summary_to_display = ai_data.get("summary_zh")
     summary_title = "中文摘要 (Abstract in Chinese)"
-
-    # 如果没有中文摘要，则回退到使用原始的英文摘要
     if not summary_to_display:
         summary_to_display = paper.get("summary", "No summary available.")
-        summary_title = "Abstract" # 标题也换成英文
-
-    # 清理摘要文本，移除多余的换行符，并用 Markdown 的 blockquote 格式化
+        summary_title = "Abstract"
     summary_markdown = "> " + summary_to_display.replace("\n", " ").strip()
 
-    # --- 使用 f-string 组装成最终的 Markdown 片段 ---
+    # --- 修改 f-string，加入 TL;DR 的展示部分 ---
     return f"""### [{title}]({abs_url})
 
 **Authors:** {authors}
