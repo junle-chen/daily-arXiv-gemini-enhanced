@@ -12,3 +12,5 @@ cd ..
 python update_readme.py
 
 python create_markdown.py data/${today}.jsonl
+
+python update_readme.py
