@@ -1,4 +1,3 @@
-# In structure.py
 from pydantic.v1 import BaseModel, Field
 
 class Structure(BaseModel):
