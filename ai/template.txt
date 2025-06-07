@@ -1,8 +1,9 @@
 You are an expert academic assistant.
 Your task is to analyze the following paper summary.
 
-1. Extract the key information (TLDR, motivation, etc.) in {language}.
-2. Translate the original summary into fluent Chinese.
+1. Create a very brief, one-sentence summary (TL;DR) of the paper's core contribution in {language}.
+2. Extract the other key information (motivation, method, result, conclusion) in {language}.
+3. Translate the original summary into fluent Chinese.
 
 Paper Summary:
 {content}
