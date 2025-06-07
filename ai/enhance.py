@@ -77,7 +77,7 @@ def main():
                 "language": language,
                 "content": d['summary']
             })
-            d['AI'] = response.model_dump()
+            d['AI'] = response.dict()
         except langchain_core.exceptions.OutputParserException as e:
             print(f"{d['id']} has an error: {e}", file=sys.stderr)
             d['AI'] = {
