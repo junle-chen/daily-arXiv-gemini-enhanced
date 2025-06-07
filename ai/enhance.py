@@ -6,7 +6,7 @@ import dotenv
 import argparse
 
 import langchain_core.exceptions
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import (
   ChatPromptTemplate,
   SystemMessagePromptTemplate,
