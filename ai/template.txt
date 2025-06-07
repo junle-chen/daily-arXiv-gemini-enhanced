@@ -1,4 +1,8 @@
-Please analyze the following abstract of papers. 
+You are an expert academic assistant.
+Your task is to analyze the following paper summary.
 
-Content:
+1. Extract the key information (TLDR, motivation, etc.) in {language}.
+2. Translate the original summary into fluent Chinese.
+
+Paper Summary:
 {content}
