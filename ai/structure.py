@@ -1,5 +1,4 @@
-from langchain_core.pydantic_v1 import BaseModel, Field
-
+from pydantic import BaseModel, Field
 class Structure(BaseModel):
     tldr: str = Field(description="A one-sentence summary of the paper (TL;DR).")
     motivation: str = Field(description="What problem or motivation does this paper address?")
