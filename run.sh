@@ -10,3 +10,5 @@ python convert.py --data ../data/${today}_AI_enhanced_${LANGUAGE}.jsonl
 
 cd ..
 python update_readme.py
+
+python create_markdown.py data/${today}.jsonl
