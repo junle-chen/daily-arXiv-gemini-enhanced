@@ -1,7 +1,8 @@
 import os
 from os.path import join
 from datetime import datetime
-import pytz
+# Python 3.9+ 内置模块，用于处理时区
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 def main():
     """
@@ -15,9 +16,7 @@ def main():
 
     # --- 1. 读取 data 目录下的所有 .md 文件并排序 ---
     try:
-        # os.listdir 获取文件名，然后过滤出 .md 文件
         md_files = [f for f in os.listdir(data_dir) if f.endswith('.md')]
-        # reverse=True 确保最新的日期排在最前面
         md_files = sorted(md_files, reverse=True)
     except FileNotFoundError:
         print(f"❌ Error: The '{data_dir}' directory was not found.")
@@ -36,21 +35,22 @@ def main():
     # --- 3. 根据模板生成动态的链接列表 ---
     content_lines = []
     for file_name in md_files:
-        # 从文件名 '2025-06-07.md' 中提取日期 '2025-06-07'
         date_str = file_name.replace('.md', '')
-        # 创建文件的相对路径 'data/2025-06-07.md'
-        file_url = join(data_dir, file_name).replace('\\', '/') # 确保路径使用 /
-        
-        # 格式化每一行链接
+        file_url = join(data_dir, file_name).replace('\\', '/')
         line = content_template.format(date=date_str, url=file_url)
         content_lines.append(line)
     
-    # 将所有行连接成一个字符串
     readme_content = "\n".join(content_lines)
 
-    # --- 4. 获取当前时间并填充到主模板中 ---
-    # 使用 pytz 获取中国时区
-    tz = pytz.timezone('Asia/Shanghai')
+    # --- 4. 获取当前时间并填充到主模板中 (使用 zoneinfo) ---
+    try:
+        # 使用 zoneinfo 获取中国时区
+        tz = ZoneInfo("Asia/Shanghai")
+    except ZoneInfoNotFoundError:
+        # 如果系统找不到时区数据 (很少见), 则使用 UTC 时间
+        print("⚠️ Warning: Timezone 'Asia/Shanghai' not found. Defaulting to UTC.")
+        tz = ZoneInfo("UTC")
+
     current_time = datetime.now(tz).strftime('%Y-%m-%d %H:%M:%S')
 
     # 将链接列表和时间填充到主模板中
@@ -65,6 +65,4 @@ def main():
 
 
 if __name__ == '__main__':
-    # 在运行前，确保你安装了 pytz
-    # pip install pytz
     main()
