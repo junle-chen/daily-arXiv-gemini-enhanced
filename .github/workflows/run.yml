@@ -1,41 +1,75 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+# .github/workflows/run.yml
 
 name: arXiv-daily-ai-enhanced
 
 on:
   schedule:
+    # 每天 16:30 UTC 时间运行 (对应北京时间凌晨 00:30)
     - cron: "30 16 * * *"
+  # 允许手动触发
   workflow_dispatch:
-
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Install dependencies
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python and uv
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
+        # 这会根据 uv.lock 文件创建虚拟环境并安装所有依赖
+        # .venv 目录会被自动创建
         uv sync
-    - name: Run script
+
+    - name: Run workflow script
+      # 将所有环境变量的设置集中在这里
+      env:
+        # 如果你使用 OpenAI 或 DeepSeek (兼容 OpenAI API)
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI_API_BASE: ${{ secrets.OPENAI_API_BASE }}
+        
+        # 如果你使用 Google Gemini (如果你在 enhance.py 中用了 ChatGoogleGenerativeAI)
+        # GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+
+        # 从 GitHub Variables 中获取配置
+        LANGUAGE: ${{ vars.LANGUAGE }}
+        CATEGORIES: ${{ vars.CATEGORIES }}
+        MODEL_NAME: ${{ vars.MODEL_NAME }}
       run: |
+        # 激活由 uv sync 创建的虚拟环境
         source .venv/bin/activate
-        export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-        export OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
-        export LANGUAGE="${{ vars.LANGUAGE }}"
-        export CATEGORIES="${{ vars.CATEGORIES }}"
-        export MODEL_NAME="${{ vars.MODEL_NAME }}"
+        # 执行主脚本
         bash run.sh
-    - name: commit
+
+    - name: Commit and push changes
       run: |
+        # 配置 Git 用户信息
         git config --global user.email "${{ vars.EMAIL }}"
         git config --global user.name "${{ vars.NAME }}"
+        
+        # 检查是否有文件变动
+        # 如果没有变动 (比如当天没有新论文)，就不执行提交
+        if [[ -z $(git status -s) ]]; then
+          echo "No changes to commit. Exiting."
+          exit 0
+        fi
+        
+        # 添加所有变动的文件 (包括 data/, README.md)
         git add .
-        git commit -m "update"
-    - name: Push changes
+        
+        # 创建一个更有意义的提交信息
+        # 例如: "update: 2025-06-07"
+        commit_message="update: $(date -u +'%Y-%m-%d')"
+        git commit -m "$commit_message"
+        
+    - name: Push changes to repository
+      # 使用 ad-m/github-push-action 推送更改
       uses: ad-m/github-push-action@master
       with:
+        # GITHUB_TOKEN 是由 GitHub Actions 自动提供的，有权限推送到当前仓库
         github_token: ${{ secrets.GITHUB_TOKEN }}
+        # 确保推送到正确的分支
+        branch: ${{ github.ref }}
