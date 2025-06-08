@@ -45,6 +45,8 @@ fi
 # --- 5. 运行 AI 增强脚本 ---
 echo "--- Step 4: Enhancing data with AI ---"
 python ai/enhance.py --data ${UNIQUE_JSONL_FILE}
+python deduplicate.py ${ENHANCED_JSONL_FILE} -o ${ENHANCED_JSONL_FILE}
+
 echo "✅ AI enhancement complete."
 
 # --- 6. 运行 Markdown 生成脚本 ---
