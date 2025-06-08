@@ -5,7 +5,7 @@ name: arXiv-daily-ai-enhanced
 on:
   schedule:
     # 每天 16:30 UTC 时间运行 (对应北京时间凌晨 00:30)
-    - cron: "30 16 * * *"
+    - cron: "0 3 * * *"
   # 允许手动触发
   workflow_dispatch:
 
