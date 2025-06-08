@@ -32,7 +32,6 @@ echo "✅ Unique data saved to ${UNIQUE_JSONL_FILE}"
 # 确保它的输入是去重后的文件
 # echo "--- Step 3: Enhancing data with AI ---"
 python ai/enhance.py --data ${UNIQUE_JSONL_FILE}
-python deduplicate.py ${ENHANCED_JSONL_FILE} -o ${ENHANCED_JSONL_FILE}
 
 # echo "✅ AI enhancement complete."
 
