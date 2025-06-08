@@ -8,15 +8,10 @@
 
 ## 报告列表
 
+- **2025-06-08**  👉  [点击查看本日报告](data/2025-06-08.md)
+
 - **2025-06-07**  👉  [点击查看本日报告](data/2025-06-07.md)
 
 
 ---
-适用于google ai (使用openai只需fork原仓库dw-dengwei/daily-arXiv-ai-enhanced)
-* setting -> secret adn variabe
-  
-* -> variables：CATEGORIES:q-bio.QM, q-bio.GN; EMAIL: ; LANGUAGE:Chinese; MODEL_NAME:gemini-2.0-flash; NAME:
-
-* -> sercret: GOOGLE_API_KEY:your api
-
-
+*这个页面由脚本在 GTM+8 时间 `{ time }` 自动生成。*
