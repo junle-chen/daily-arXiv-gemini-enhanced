@@ -1,54 +1,59 @@
 #!/bin/bash
-
-# --- 脚本设置 ---
-# set -e: 任何命令失败，脚本将立即停止执行。这对于调试至关重要！
 set -e
 
 echo "🚀 Starting Daily ArXiv Update Workflow..."
 
 # --- 1. 定义变量 ---
-# 这样做可以让脚本更易于阅读和维护
 today=$(date -u "+%Y-%m-%d")
+# 新增：获取昨天的日期 (适用于 Linux 和 macOS)
+yesterday=$(date -u -d "yesterday" "+%Y-%m-%d")
+
 RAW_JSONL_FILE="data/${today}.jsonl"
 UNIQUE_JSONL_FILE="data/${today}_unique.jsonl"
-# 假设你的 AI 增强脚本会使用这个名字
-ENHANCED_JSONL_FILE="data/${today}_unique_AI_enhanced_Chinese.jsonl" 
-# 最终的 Markdown 文件名
+YESTERDAY_UNIQUE_FILE="data/${yesterday}_unique.jsonl"
+ENHANCED_JSONL_FILE="data/${today}_unique_AI_enhanced_Chinese.jsonl"
 FINAL_MD_FILE="data/${today}.md"
 
 # --- 2. 运行 Scrapy 爬虫 ---
-# 始终从项目根目录调用，并明确指定路径
 echo "--- Step 1: Crawling data from ArXiv ---"
 (cd daily_arxiv && scrapy crawl arxiv -o ../${RAW_JSONL_FILE})
 echo "✅ Raw data saved to ${RAW_JSONL_FILE}"
 
 # --- 3. 运行去重脚本 ---
-# 明确指定输入和输出文件
-echo "--- Step 2: Deduplicating data ---"
+echo "--- Step 2: Deduplicating raw data ---"
 python deduplicate.py ${RAW_JSONL_FILE} -o ${UNIQUE_JSONL_FILE}
 echo "✅ Unique data saved to ${UNIQUE_JSONL_FILE}"
 
-# --- 4. (可选) 运行 AI 增强脚本 ---
-# 确保它的输入是去重后的文件
-# echo "--- Step 3: Enhancing data with AI ---"
+# --- 4. 新增：检查今天的内容是否与昨天相同 ---
+echo "--- Step 3: Checking for new content compared to yesterday ---"
+# 首先检查昨天的文件是否存在
+if [ -f "$YESTERDAY_UNIQUE_FILE" ]; then
+    # 使用 cmp 命令静默比较两个文件。如果相同，cmp 返回 0
+    if cmp -s "$UNIQUE_JSONL_FILE" "$YESTERDAY_UNIQUE_FILE"; then
+        echo "ℹ️  No new papers found today. Content is the same as yesterday. Exiting workflow."
+        # 清理今天生成的临时文件
+        rm "$RAW_JSONL_FILE" "$UNIQUE_JSONL_FILE"
+        exit 0 # 正常退出，不执行后续步骤
+    else
+        echo "✅ New content found. Proceeding with the workflow."
+    fi
+else
+    echo "ℹ️  Yesterday's file not found. Assuming first run or fresh start."
+fi
+
+
+# --- 5. 运行 AI 增强脚本 ---
+echo "--- Step 4: Enhancing data with AI ---"
 python ai/enhance.py --data ${UNIQUE_JSONL_FILE}
+echo "✅ AI enhancement complete."
 
-# echo "✅ AI enhancement complete."
+# --- 6. 运行 Markdown 生成脚本 ---
+echo "--- Step 5: Converting JSONL to Markdown ---"
+python to_md/convert.py --data ${ENHANCED_JSONL_FILE}
+echo "✅ Markdown report generated."
 
-
-# --- 5. 运行 Markdown 生成脚本 ---
-# # 如果你运行了 AI 增强，后续步骤的输入文件就需要改变
-INPUT_FOR_MD=${ENHANCED_JSONL_FILE}
-# 如果你没有 AI 增强步骤，就用去重后的文件
-#INPUT_FOR_MD=${UNIQUE_JSONL_FILE}
-
-echo "--- Step 4: Converting JSONL to Markdown ---"
-# 从根目录调用，并使用相对于根目录的路径
-python to_md/convert.py --data ${INPUT_FOR_MD}
-echo "✅ Markdown report generated at ${FINAL_MD_FILE}"
-
-# --- 6. 更新主 README 文件 ---
-echo "--- Step 5: Updating main README.md ---"
+# --- 7. 更新主 README 文件 ---
+echo "--- Step 6: Updating main README.md ---"
 python update_readme.py
 echo "✅ README.md updated."
 
