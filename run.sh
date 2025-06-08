@@ -3,58 +3,60 @@ set -e
 
 echo "🚀 Starting Daily ArXiv Update Workflow..."
 
-# --- 1. 定义变量 ---
-today=$(date -u "+%Y-%m-%d")
-# 新增：获取昨天的日期 (适用于 Linux 和 macOS)
-yesterday=$(date -u -d "yesterday" "+%Y-%m-%d")
+# --- 1. 使用北京时区获取正确的当天日期 ---
+today=$(TZ=Asia/Shanghai date "+%Y-%m-%d")
+yesterday=$(TZ=Asia/Shanghai date -d "yesterday" "+%Y-%m-%d")
+echo "✅ Workflow date set to: ${today} (Asia/Shanghai)"
 
+# --- 2. 定义所有文件名 ---
 RAW_JSONL_FILE="data/${today}.jsonl"
 UNIQUE_JSONL_FILE="data/${today}_unique.jsonl"
 YESTERDAY_UNIQUE_FILE="data/${yesterday}_unique.jsonl"
 ENHANCED_JSONL_FILE="data/${today}_unique_AI_enhanced_Chinese.jsonl"
 FINAL_MD_FILE="data/${today}.md"
 
-# --- 2. 运行 Scrapy 爬虫 ---
+# --- 3. 运行 Scrapy 爬虫 ---
 echo "--- Step 1: Crawling data from ArXiv ---"
 (cd daily_arxiv && scrapy crawl arxiv -o ../${RAW_JSONL_FILE})
 echo "✅ Raw data saved to ${RAW_JSONL_FILE}"
 
-# --- 3. 运行去重脚本 ---
+# --- 4. 运行去重脚本 ---
 echo "--- Step 2: Deduplicating raw data ---"
 python deduplicate.py ${RAW_JSONL_FILE} -o ${UNIQUE_JSONL_FILE}
 echo "✅ Unique data saved to ${UNIQUE_JSONL_FILE}"
 
-# --- 4. 新增：检查今天的内容是否与昨天相同 ---
-echo "--- Step 3: Checking for new content compared to yesterday ---"
-# 首先检查昨天的文件是否存在
+# --- 5. 新增：智能比较今天和昨天的内容 (忽略行序) ---
+echo "--- Step 3: Checking for new content (ignoring line order) ---"
 if [ -f "$YESTERDAY_UNIQUE_FILE" ]; then
-    # 使用 cmp 命令静默比较两个文件。如果相同，cmp 返回 0
-    if cmp -s "$UNIQUE_JSONL_FILE" "$YESTERDAY_UNIQUE_FILE"; then
-        echo "ℹ️  No new papers found today. Content is the same as yesterday. Exiting workflow."
-        # 清理今天生成的临时文件
+    # 提取、排序并比较两个文件的 ID 集合
+    # diff <(command1) <(command2) 是一种高级用法，用于比较两个命令的输出
+    # grep -o '"id": "[^"]*"' 会只提取出 id 字段
+    # sort 会对提取出的 id 排序
+    # 如果两个排序后的 id 列表没有差异，diff 命令的输出就是空的
+    if [ -z "$(diff <(grep -o '"id": "[^"]*"' "$UNIQUE_JSONL_FILE" | sort) <(grep -o '"id": "[^"]*"' "$YESTERDAY_UNIQUE_FILE" | sort))" ]; then
+        echo "ℹ️  No new papers found. The set of papers is the same as yesterday. Exiting workflow."
         rm "$RAW_JSONL_FILE" "$UNIQUE_JSONL_FILE"
-        exit 0 # 正常退出，不执行后续步骤
+        exit 0
     else
         echo "✅ New content found. Proceeding with the workflow."
     fi
 else
-    echo "ℹ️  Yesterday's file not found. Assuming first run or fresh start."
+    echo "ℹ️  Yesterday's file not found. Assuming first run."
 fi
 
-
-# --- 5. 运行 AI 增强脚本 ---
+# --- 6. 运行 AI 增强脚本 ---
 echo "--- Step 4: Enhancing data with AI ---"
+# 确保它的输入是去重后的文件
 python ai/enhance.py --data ${UNIQUE_JSONL_FILE}
-python deduplicate.py ${ENHANCED_JSONL_FILE} -o ${ENHANCED_JSONL_FILE}
+# 我已经移除了你脚本中那个在 enhance.py 之后多余的去重命令
+echo "✅ AI enhancement complete. Output is ${ENHANCED_JSONL_FILE}"
 
-echo "✅ AI enhancement complete."
-
-# --- 6. 运行 Markdown 生成脚本 ---
+# --- 7. 运行 Markdown 生成脚本 ---
 echo "--- Step 5: Converting JSONL to Markdown ---"
 python to_md/convert.py --data ${ENHANCED_JSONL_FILE}
-echo "✅ Markdown report generated."
+echo "✅ Markdown report generated at ${FINAL_MD_FILE}"
 
-# --- 7. 更新主 README 文件 ---
+# --- 8. 更新主 README 文件 ---
 echo "--- Step 6: Updating main README.md ---"
 python update_readme.py
 echo "✅ README.md updated."
