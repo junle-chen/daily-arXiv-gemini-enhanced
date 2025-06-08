@@ -11,4 +11,9 @@
 {readme_content}
 
 ---
-*这个页面由脚本在 GTM+8 时间 `{{ time }}` 自动生成。*
+适用于google ai (使用openai只需使用原仓库dw-dengwei/daily-arXiv-ai-enhanced)
+* setting -> secret adn variabe
+  
+* -> variables：CATEGORIES:q-bio.QM, q-bio.GN;EMAIL;LANGUAGE:Chinese;MODEL_NAME:gemini-2.0-flash;NAME:
+
+* -> sercret: GOOGLE_API_KEY:your api
