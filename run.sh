@@ -48,7 +48,6 @@ fi
 echo "--- Step 4: Enhancing data with AI ---"
 # 确保它的输入是去重后的文件
 python ai/enhance.py --data ${UNIQUE_JSONL_FILE}
-# 我已经移除了你脚本中那个在 enhance.py 之后多余的去重命令
 echo "✅ AI enhancement complete. Output is ${ENHANCED_JSONL_FILE}"
 
 # --- 7. 运行 Markdown 生成脚本 ---
