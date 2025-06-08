@@ -1,7 +1,11 @@
 arxiv:
   categories: # 文章类型
-    - q-bio.QM
-    - q-bio.GN
+    - cs.CV
+    - cs.LG
+    - cs.AI
+    - cs.RO
+    - cs.DB
+
 
 llm:
   # 在这里也可以顺便把你想要的模型改掉，比如 gpt-3.5-turbo

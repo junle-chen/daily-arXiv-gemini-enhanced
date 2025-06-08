@@ -6,6 +6,7 @@ import os
 
 # in to_md/convert.py
 
+
 def format_paper_to_markdown(paper: dict) -> str:
     """
     将单个论文的字典数据，格式化成一段漂亮的 Markdown 文本。
@@ -22,7 +23,7 @@ def format_paper_to_markdown(paper: dict) -> str:
     # --- 1. 新增：提取 TL;DR ---
     # 安全地获取 tldr，如果不存在则显示一条提示信息
     tldr_summary = ai_data.get("tldr", "AI one-sentence summary is not available.")
-    
+
     # --- 2. 智能选择摘要 (这部分不变) ---
     summary_to_display = ai_data.get("summary_zh")
     summary_title = "中文摘要 (Abstract in Chinese)"
@@ -47,6 +48,7 @@ def format_paper_to_markdown(paper: dict) -> str:
 {summary_markdown}
 """
 
+
 def main():
     """
     主函数：读取 JSONL 文件，并将其转换为一个格式化的 Markdown 文件。
@@ -58,7 +60,13 @@ def main():
         "--data",  # 与您现有工作流保持一致
         dest="input_file",
         required=True,
-        help="Path to the input .jsonl file (can be raw, unique, or AI-enhanced)."
+        help="Path to the input .jsonl file (can be raw, unique, or AI-enhanced).",
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        dest="output_file",
+        help="Path to the output markdown file. If not provided, a default name will be generated.",
     )
     args = parser.parse_args()
 
@@ -71,25 +79,27 @@ def main():
     print(f"▶️  Reading from: {input_path}")
 
     papers = []
-    with open(input_path, 'r', encoding='utf-8') as f:
+    with open(input_path, "r", encoding="utf-8") as f:
         for line in f:
             try:
                 papers.append(json.loads(line))
             except json.JSONDecodeError:
                 print(f"⚠️ Warning: Skipping malformed JSON line: {line.strip()}")
-    
+
     if not papers:
-        print("ℹ️ No papers found in the input file. An empty Markdown file will be created.")
-    
+        print(
+            "ℹ️ No papers found in the input file. An empty Markdown file will be created."
+        )
+
     # --- 生成 Markdown 内容 ---
-    
+
     # 从输入文件名中提取日期，例如 '.../data/2025-06-07_unique.jsonl' -> '2025-06-07'
     base_name = os.path.basename(input_path)
-    date_str = base_name.split('_')[0].split('.')[0]
+    date_str = base_name.split("_")[0].split(".")[0]
 
     # 创建文档大标题
     header = f"# 每日 ArXiv 摘要速递: {date_str}\n\n"
-    
+
     # 为每一篇论文生成 Markdown 内容
     markdown_parts = [format_paper_to_markdown(paper) for paper in papers]
 
@@ -97,13 +107,18 @@ def main():
     final_markdown = header + "\n---\n\n".join(markdown_parts)
 
     # --- 写入文件 ---
-    
-    # 定义输出文件名，例如 '.../data/2025-06-07_unique.jsonl' -> '.../data/2025-06-07.md'
-    # 这个逻辑可以正确处理带 _unique 或 _AI_enhanced 的文件名
-    output_filename = f"{date_str}.md"
-    output_path = os.path.join(os.path.dirname(input_path), output_filename)
 
-    with open(output_path, 'w', encoding='utf-8') as f:
+    # 定义输出文件路径
+    if args.output_file:
+        # 使用用户提供的输出文件路径
+        output_path = args.output_file
+    else:
+        # 默认路径：例如 '.../data/2025-06-07_unique.jsonl' -> '.../data/2025-06-07.md'
+        # 这个逻辑可以正确处理带 _unique 或 _AI_enhanced 的文件名
+        output_filename = f"{date_str}.md"
+        output_path = os.path.join(os.path.dirname(input_path), output_filename)
+
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write(final_markdown)
 
     print(f"✅ Successfully converted {len(papers)} papers to: {output_path}")

@@ -1,10 +1,8 @@
 import os
 from os.path import join
 from datetime import datetime
-
 # Python 3.9+ 内置模块，用于处理时区
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-
 
 def main():
     """
@@ -12,20 +10,28 @@ def main():
     同时区分常规报告和轨迹预测+大模型报告。
     """
     # 定义模板文件路径
-    main_template_path = "template.md"
-    content_template_path = "readme_content_template.md"
-    data_dir = "data"
-    output_file = "README.md"
+    main_template_path = 'template.md'
+    content_template_path = 'readme_content_template.md'
+    data_dir = 'data'
+    output_file = 'README.md'
 
     # --- 1. 读取 data 目录下的所有 .md 文件并排序 ---
     try:
         # 获取所有 .md 文件
-        all_md_files = [f for f in os.listdir(data_dir) if f.endswith(".md")]
-
+        all_md_files = [f for f in os.listdir(data_dir) if f.endswith('.md')]
+        
         # 将文件分为两类：常规和轨迹预测+大模型
-        regular_md_files = [f for f in all_md_files if "_trajectory_llm" not in f]
-        trajectory_llm_files = [f for f in all_md_files if "_trajectory_llm" in f]
-
+        regular_md_files = [f for f in all_md_files if '_trajectory_llm' not in f]
+        trajectory_llm_files = [f for f in all_md_files if '_trajectory_llm' in f]
+        
+        # 对两类文件分别排序
+        regular_md_files = sorted(regular_md_files, reverse=True)
+        trajectory_llm_files = sorted(trajectory_llm_files, reverse=True)
+        
+        # 将文件分为两类：常规和轨迹预测+大模型
+        regular_md_files = [f for f in all_md_files if not '_trajectory_llm' in f]
+        trajectory_llm_files = [f for f in all_md_files if '_trajectory_llm' in f]
+        
         # 对两类文件分别排序
         regular_md_files = sorted(regular_md_files, reverse=True)
         trajectory_llm_files = sorted(trajectory_llm_files, reverse=True)
@@ -35,37 +41,22 @@ def main():
 
     # --- 2. 读取两个模板文件 ---
     try:
-        with open(main_template_path, "r", encoding="utf-8") as f:
+        with open(main_template_path, 'r', encoding='utf-8') as f:
             main_template = f.read()
-        with open(content_template_path, "r", encoding="utf-8") as f:
+        with open(content_template_path, 'r', encoding='utf-8') as f:
             content_template = f.read()
     except FileNotFoundError as e:
         print(f"❌ Error: Template file not found: {e.filename}")
         return
 
     # --- 3. 根据模板生成动态的链接列表 ---
-    # 添加常规报告标题
-    content_lines = ["### 常规分类论文"]
-
-    # 常规报告链接
-    for file_name in regular_md_files:
-        date_str = file_name.replace(".md", "")
-        file_url = join(data_dir, file_name).replace("\\", "/")
+    content_lines = []
+    for file_name in md_files:
+        date_str = file_name.replace('.md', '')
+        file_url = join(data_dir, file_name).replace('\\', '/')
         line = content_template.format(date=date_str, url=file_url)
         content_lines.append(line)
-
-    # 添加轨迹预测+大模型报告标题
-    if trajectory_llm_files:  # 只有当有这类文件时才添加标题
-        content_lines.append("\n### 轨迹预测与大模型相关论文")
-
-        # 轨迹预测+大模型报告链接
-        for file_name in trajectory_llm_files:
-            date_str = file_name.replace("_trajectory_llm.md", "")
-            file_url = join(data_dir, file_name).replace("\\", "/")
-            line = content_template.format(date=date_str, url=file_url)
-            content_lines.append(line)
-
-    # 合并所有链接
+    
     readme_content = "\n".join(content_lines)
 
     # --- 4. 获取当前时间并填充到主模板中 (使用 zoneinfo) ---
@@ -77,19 +68,18 @@ def main():
         print("⚠️ Warning: Timezone 'Asia/Shanghai' not found. Defaulting to UTC.")
         tz = ZoneInfo("UTC")
 
-    current_time = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+    current_time = datetime.now(tz).strftime('%Y-%m-%d %H:%M:%S')
 
     # 将链接列表和时间填充到主模板中
     final_markdown = main_template.format(readme_content=readme_content)
-    final_markdown = final_markdown.replace("{{ time }}", current_time)
+    final_markdown = final_markdown.replace('{{ time }}', current_time)
 
     # --- 5. 写入最终的 README.md 文件 ---
-    with open(output_file, "w", encoding="utf-8") as f:
+    with open(output_file, 'w', encoding='utf-8') as f:
         f.write(final_markdown)
 
-    total_files = len(regular_md_files) + len(trajectory_llm_files)
-    print(f"✅ Successfully updated {output_file} with {total_files} entries.")
+    print(f"✅ Successfully updated {output_file} with {len(md_files)} entries.")
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
