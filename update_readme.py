@@ -23,8 +23,12 @@ def main():
         all_md_files = [f for f in os.listdir(data_dir) if f.endswith(".md")]
 
         # 将文件分为两类：常规和轨迹预测+大模型
-        regular_md_files = [f for f in all_md_files if "_trajectory_llm" not in f]
-        trajectory_llm_files = [f for f in all_md_files if "_trajectory_llm" in f]
+        trajectory_llm_files = [
+            f
+            for f in all_md_files
+            if "_trajectory_llm" in f or "_trajectory_and_large_models" in f
+        ]
+        regular_md_files = [f for f in all_md_files if f not in trajectory_llm_files]
 
         # 对两类文件分别排序
         regular_md_files = sorted(regular_md_files, reverse=True)
@@ -44,26 +48,28 @@ def main():
         return
 
     # --- 3. 根据模板生成动态的链接列表 ---
-    # 添加常规报告标题
-    content_lines = ["### 常规分类论文"]
+    content_lines = ["### 轨迹预测与大模型相关论文"]
 
-    # 常规报告链接
-    for file_name in regular_md_files:
-        date_str = file_name.replace(".md", "")
+    # 处理轨迹预测和大模型相关论文
+    for file_name in trajectory_llm_files:
+        # 从文件名中提取日期
+        base_name = file_name.split("_")[0]
         file_url = join(data_dir, file_name).replace("\\", "/")
-        line = content_template.format(date=date_str, url=file_url)
+        line = content_template.format(date=base_name, url=file_url)
         content_lines.append(line)
 
-    # 添加轨迹预测+大模型报告标题
-    if trajectory_llm_files:  # 只有当有这类文件时才添加标题
-        content_lines.append("\n### 轨迹预测与大模型相关论文")
+    # 添加常规论文区域标题（如果有常规论文）
+    if regular_md_files:
+        content_lines.append("\n### 常规分类论文")
 
-        # 轨迹预测+大模型报告链接
-        for file_name in trajectory_llm_files:
-            date_str = file_name.replace("_trajectory_llm.md", "")
-            file_url = join(data_dir, file_name).replace("\\", "/")
-            line = content_template.format(date=date_str, url=file_url)
-            content_lines.append(line)
+        # 处理常规论文
+        for file_name in regular_md_files:
+            if "_trajectory_llm" not in file_name:  # 确保不包含轨迹预测文件
+                # 从文件名中提取日期
+                base_name = file_name.split(".")[0]
+                file_url = join(data_dir, file_name).replace("\\", "/")
+                line = content_template.format(date=base_name, url=file_url)
+                content_lines.append(line)
 
     # 合并所有链接
     readme_content = "\n".join(content_lines)
@@ -87,8 +93,7 @@ def main():
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(final_markdown)
 
-    total_files = len(regular_md_files) + len(trajectory_llm_files)
-    print(f"✅ Successfully updated {output_file} with {total_files} entries.")
+    print(f"✅ Successfully updated {output_file} with {len(all_md_files)} entries.")
 
 
 if __name__ == "__main__":

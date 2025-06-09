@@ -79,35 +79,9 @@ else
     echo "ℹ️  Yesterday's file not found. Assuming first run."
 fi
 
-# --- 6. 运行 AI 增强脚本 ---
-echo "--- Step 4: Enhancing data with AI ---"
-# 确保它的输入是去重后的文件
-
-# 添加重试逻辑，最多尝试3次
-max_attempts=3
-attempt=1
-while [ $attempt -le $max_attempts ]; do
-    echo "Attempt $attempt of $max_attempts for enhancing data"
-    if python ai/enhance.py --data ${UNIQUE_JSONL_FILE}; then
-        echo "✅ AI enhancement complete. Output is ${ENHANCED_JSONL_FILE}"
-        break
-    else
-        echo "❌ Enhancement failed on attempt $attempt"
-        if [ $attempt -lt $max_attempts ]; then
-            echo "Waiting 120 seconds before retrying..."
-            sleep 120
-        else
-            echo "All attempts failed. Cannot continue without enhanced data."
-            exit 1
-        fi
-    fi
-    attempt=$((attempt+1))
-done
-
-# --- 新增: 为轨迹预测和大模型数据生成增强内容 ---
+# --- 6. 只为轨迹预测和大模型数据生成增强内容 ---
 TRAJECTORY_LLM_ENHANCED_FILE="data/${today}_trajectory_llm_AI_enhanced_Chinese.jsonl"
-TRAJECTORY_LLM_MD_FILE="data/${today}_trajectory_llm.md"
-echo "--- Step 4.1: Enhancing trajectory prediction and large model data with AI ---"
+echo "--- Step 4: Enhancing trajectory prediction and large model data with AI ---"
 
 # 检查轨迹预测数据文件是否存在且非空
 if [ -s "${TRAJECTORY_LLM_FILE}" ]; then
@@ -137,15 +111,11 @@ else
     touch ${TRAJECTORY_LLM_ENHANCED_FILE}
 fi
 
-# --- 7. 运行 Markdown 生成脚本 ---
+# --- 7. 只为轨迹预测和大模型数据生成Markdown ---
 echo "--- Step 5: Converting JSONL to Markdown ---"
-python to_md/convert.py --data ${ENHANCED_JSONL_FILE}
-echo "✅ Markdown report generated at ${FINAL_MD_FILE}"
-
-# --- 新增: 为轨迹预测和大模型数据生成Markdown ---
-echo "--- Step 5.1: Converting trajectory prediction and large model JSONL to Markdown ---"
+TRAJECTORY_LLM_MD_FILE="data/${today}_trajectory_and_large_models.md"
 python to_md/convert.py --data ${TRAJECTORY_LLM_ENHANCED_FILE} --output ${TRAJECTORY_LLM_MD_FILE}
-echo "✅ Trajectory prediction and large model Markdown report generated at ${TRAJECTORY_LLM_MD_FILE}"
+echo "✅ Markdown report for trajectory and large model papers generated at ${TRAJECTORY_LLM_MD_FILE}"
 
 # --- 8. 更新主 README 文件 ---
 echo "--- Step 6: Updating main README.md ---"

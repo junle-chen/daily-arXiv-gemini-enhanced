@@ -4,26 +4,26 @@
 
 本项目现在支持智能识别与轨迹预测和大模型相关的论文，使用LLM技术自动判别论文内容的相关性。
 
-最新的报告总是显示在最上方。
+总结轨迹预测与大模型相关的论文，如果想看常规论文分类，请查看 [常规论文报告](https://github.com/dw-dengwei/daily-arXiv-ai-enhanced/blob/main/README.md)
 
 ---
 
 ## 报告列表
 
-### 常规分类论文
-- **2025-06-08**  👉  [点击查看本日报告](data/2025-06-08.md)
-
-- **2025-06-07**  👉  [点击查看本日报告](data/2025-06-07.md)
-
-
 ### 轨迹预测与大模型相关论文
+
+- **2025-06-09**  👉  [点击查看本日报告](data/2025-06-09_trajectory_and_large_models.md)
 - **2025-06-08**  👉  [点击查看本日报告](data/2025-06-08_trajectory_llm.md)
 
+### 常规分类论文
+
+- **2025-06-08**  👉  [点击查看本日报告](data/2025-06-08.md)
+- **2025-06-07**  👉  [点击查看本日报告](data/2025-06-07.md)
 
 ---
-适用于google ai (使用openai只需使用原仓库dw-dengwei/daily-arXiv-ai-enhanced)
-* setting -> secret adn variabe
-  
-* -> variables：CATEGORIES:q-bio.QM, q-bio.GN;EMAIL;LANGUAGE:Chinese;MODEL_NAME:gemini-2.0-flash;NAME:
 
+适用于google ai (使用openai只需使用原仓库dw-dengwei/daily-arXiv-ai-enhanced)
+
+* setting -> secret adn variabe
+* -> variables：CATEGORIES:q-bio.QM, q-bio.GN;EMAIL;LANGUAGE:Chinese;MODEL_NAME:gemini-2.0-flash;NAME:
 * -> sercret: GOOGLE_API_KEY:your api

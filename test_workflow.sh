@@ -27,7 +27,7 @@ TRAJECTORY_LLM_FILE="data/${base_name}_trajectory_llm.jsonl"
 ENHANCED_JSONL_FILE="data/${base_name}_unique_AI_enhanced_Chinese.jsonl"
 TRAJECTORY_LLM_ENHANCED_FILE="data/${base_name}_trajectory_llm_AI_enhanced_Chinese.jsonl"
 FINAL_MD_FILE="data/${base_name}.md"
-TRAJECTORY_LLM_MD_FILE="data/${base_name}_trajectory_llm.md"
+TRAJECTORY_LLM_MD_FILE="data/${base_name}_trajectory_and_large_models.md"
 
 echo "✅ Using existing data file: ${RAW_JSONL_FILE}"
 
@@ -36,27 +36,27 @@ echo "✅ Using existing data file: ${RAW_JSONL_FILE}"
 # python deduplicate.py ${RAW_JSONL_FILE} -o ${UNIQUE_JSONL_FILE}
 # echo "✅ Unique data saved to ${UNIQUE_JSONL_FILE}"
 
-# # --- 3. 筛选轨迹预测和大模型相关论文 ---
-# echo "--- Step 2: Filtering papers related to trajectory prediction and large models using LLM ---"
-# # 使用与AI增强相同的模型
-# MODEL_NAME=${MODEL_NAME:-"gemini-2.0-flash"}
-# python filter_papers.py --data ${UNIQUE_JSONL_FILE} -o ${TRAJECTORY_LLM_FILE} --model ${MODEL_NAME} --threshold 0.6
-# echo "✅ Filtered data saved to ${TRAJECTORY_LLM_FILE}"
+# --- 3. 筛选轨迹预测和大模型相关论文 ---
+echo "--- Step 2: Filtering papers related to trajectory prediction and large models using LLM ---"
+# 使用与AI增强相同的模型
+MODEL_NAME=${MODEL_NAME:-"gemini-2.0-flash"}
+python filter_papers.py --data ${UNIQUE_JSONL_FILE} -o ${TRAJECTORY_LLM_FILE} --model ${MODEL_NAME} --threshold 0.6
+echo "✅ Filtered data saved to ${TRAJECTORY_LLM_FILE}"
 
-# --- 4. 运行 AI 增强脚本 ---
-echo "--- Step 3: Enhancing data with AI ---"
-python ai/enhance.py --data ${UNIQUE_JSONL_FILE}
-echo "✅ AI enhancement complete. Output is ${ENHANCED_JSONL_FILE}"
+# # --- 4. 运行 AI 增强脚本 ---
+# echo "--- Step 3: Enhancing data with AI ---"
+# python ai/enhance.py --data ${UNIQUE_JSONL_FILE}
+# echo "✅ AI enhancement complete. Output is ${ENHANCED_JSONL_FILE}"
 
 # --- 5. 为轨迹预测和大模型数据生成增强内容 ---
 echo "--- Step 3.1: Enhancing trajectory prediction and large model data with AI ---"
 python ai/enhance.py --data ${TRAJECTORY_LLM_FILE}
 echo "✅ AI enhancement for trajectory prediction papers complete. Output is ${TRAJECTORY_LLM_ENHANCED_FILE}"
 
-# --- 6. 运行 Markdown 生成脚本 ---
-echo "--- Step 4: Converting JSONL to Markdown ---"
-python to_md/convert.py --data ${ENHANCED_JSONL_FILE}
-echo "✅ Markdown report generated at ${FINAL_MD_FILE}"
+# # --- 6. 运行 Markdown 生成脚本 ---
+# echo "--- Step 4: Converting JSONL to Markdown ---"
+# python to_md/convert.py --data ${ENHANCED_JSONL_FILE}
+# echo "✅ Markdown report generated at ${FINAL_MD_FILE}"
 
 # --- 7. 为轨迹预测和大模型数据生成Markdown ---
 echo "--- Step 4.1: Converting trajectory prediction and large model JSONL to Markdown ---"

@@ -6,8 +6,19 @@ import os
 import sys
 import time
 import random
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-from google.api_core.exceptions import ResourceExhausted, InternalServerError, ServiceUnavailable
+import signal
+import threading
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+)
+from google.api_core.exceptions import (
+    ResourceExhausted,
+    InternalServerError,
+    ServiceUnavailable,
+)
 from langchain_google_genai import ChatGoogleGenerativeAI
 import api_manager
 from langchain.prompts import (
@@ -53,7 +64,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    
+
     # Configure environment for optimal API usage in GitHub Actions
     api_manager.setup_environment()
 
@@ -76,16 +87,49 @@ def main():
     except Exception as e:
         print(f"❌ Error: Could not initialize LLM model: {e}", file=sys.stderr)
         return
-        
-    # 定义带有重试机制的LLM调用函数
+
+    # 定义带有重试机制和超时控制的LLM调用函数
     @retry(
         reraise=True,
         stop=stop_after_attempt(5),  # 最多尝试5次
         wait=wait_exponential(multiplier=1, min=4, max=60),  # 指数退避策略
-        retry=retry_if_exception_type((ResourceExhausted, InternalServerError, ServiceUnavailable))
+        retry=retry_if_exception_type(
+            (ResourceExhausted, InternalServerError, ServiceUnavailable, APITimeoutError)
+        ),
     )
-    def invoke_with_retry(title, summary):
-        return llm.invoke(prompt_template.format(title=title, summary=summary))
+    def invoke_with_retry(title, summary, timeout_seconds=120):
+        """使用超时保护调用LLM API"""
+        print(f"📤 发送请求到模型 (标题: '{title[:30]}...')", file=sys.stderr)
+        
+        # 使用线程超时机制
+        def invoke_llm():
+            return llm.invoke(prompt_template.format(title=title, summary=summary))
+            
+        result = [None]
+        error = [None]
+        
+        def worker():
+            try:
+                result[0] = invoke_llm()
+            except Exception as e:
+                error[0] = e
+        
+        thread = threading.Thread(target=worker)
+        thread.daemon = True
+        start_time = time.time()
+        thread.start()
+        thread.join(timeout_seconds)
+        elapsed = time.time() - start_time
+        
+        if thread.is_alive():
+            print(f"⚠️ API调用超时 ({timeout_seconds}秒)", file=sys.stderr)
+            raise APITimeoutError(f"API调用超时（超过{timeout_seconds}秒）")
+        if error[0] is not None:
+            print(f"⚠️ API调用错误: {error[0]}", file=sys.stderr)
+            raise error[0]
+            
+        print(f"✓ API响应成功 (用时: {elapsed:.1f}秒)", file=sys.stderr)
+        return result[0]
 
     # 创建提示模板
     system_template = """你是一个学术论文过滤器。你的任务是判断一篇论文是否与轨迹预测（trajectory prediction）和大语言模型（Large Language Models）相关。
@@ -150,10 +194,29 @@ def main():
         try:
             # 使用API管理器添加智能延迟，避免频率限制
             api_manager.smart_delay()  # 使用默认参数以最优化API使用率
-            print(f"Processing paper {processed_papers}/{total_papers}: {title[:50]}...", file=sys.stderr)
-            
+            print(
+                f"Processing paper {processed_papers}/{total_papers}: {title[:50]}...",
+                file=sys.stderr,
+            )
+
             # 使用带重试机制的函数调用LLM分析论文内容
-            response = invoke_with_retry(title, summary)
+            try:
+                response = invoke_with_retry(title, summary)
+            except ResourceExhausted as e:
+                # 特别处理API配额超限错误
+                if "GenerateRequestsPerDayPerProjectPerModel-FreeTier" in str(e):
+                    print(
+                        f"⚠️ 已达到每日API配额限制 (1000次/天)，停止处理更多论文",
+                        file=sys.stderr,
+                    )
+                    # 如果已经处理了足够的论文，可以继续工作流
+                    if len(filtered_papers) > 0:
+                        break
+                    else:
+                        raise e
+                else:
+                    # 其他API速率错误由retry处理
+                    raise e
 
             # 解析响应
             try:
@@ -224,6 +287,40 @@ def main():
         file=sys.stderr,
     )
     print(f"✅ 成功保存过滤后的论文到: {output_path}", file=sys.stderr)
+
+
+# 添加超时处理类和函数
+class APITimeoutError(Exception):
+    """API调用超时异常"""
+    pass
+
+
+def timeout_handler(signum, frame):
+    """处理超时信号"""
+    raise APITimeoutError("API调用超时")
+
+
+def call_with_timeout(func, args=(), kwargs={}, timeout_seconds=60):
+    """使用线程超时机制调用函数（适用于所有平台）"""
+    result = [None]
+    error = [None]
+    
+    def worker():
+        try:
+            result[0] = func(*args, **kwargs)
+        except Exception as e:
+            error[0] = e
+    
+    thread = threading.Thread(target=worker)
+    thread.daemon = True
+    thread.start()
+    thread.join(timeout_seconds)
+    
+    if thread.is_alive():
+        return None, APITimeoutError(f"API调用超时（超过{timeout_seconds}秒）")
+    if error[0] is not None:
+        return None, error[0]
+    return result[0], None
 
 
 if __name__ == "__main__":
