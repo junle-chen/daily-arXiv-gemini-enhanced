@@ -4,7 +4,12 @@ import argparse
 import json
 import os
 import sys
+import time
+import random
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from google.api_core.exceptions import ResourceExhausted, InternalServerError, ServiceUnavailable
 from langchain_google_genai import ChatGoogleGenerativeAI
+import api_manager
 from langchain.prompts import (
     ChatPromptTemplate,
     SystemMessagePromptTemplate,
@@ -48,6 +53,9 @@ def parse_args():
 
 def main():
     args = parse_args()
+    
+    # Configure environment for optimal API usage in GitHub Actions
+    api_manager.setup_environment()
 
     if not os.path.exists(args.data):
         print(f"❌ Error: Input file not found at '{args.data}'", file=sys.stderr)
@@ -68,6 +76,16 @@ def main():
     except Exception as e:
         print(f"❌ Error: Could not initialize LLM model: {e}", file=sys.stderr)
         return
+        
+    # 定义带有重试机制的LLM调用函数
+    @retry(
+        reraise=True,
+        stop=stop_after_attempt(5),  # 最多尝试5次
+        wait=wait_exponential(multiplier=1, min=4, max=60),  # 指数退避策略
+        retry=retry_if_exception_type((ResourceExhausted, InternalServerError, ServiceUnavailable))
+    )
+    def invoke_with_retry(title, summary):
+        return llm.invoke(prompt_template.format(title=title, summary=summary))
 
     # 创建提示模板
     system_template = """你是一个学术论文过滤器。你的任务是判断一篇论文是否与轨迹预测（trajectory prediction）和大语言模型（Large Language Models）相关。
@@ -130,8 +148,12 @@ def main():
             continue
 
         try:
-            # 使用LLM分析论文内容
-            response = llm.invoke(prompt_template.format(title=title, summary=summary))
+            # 使用API管理器添加智能延迟，避免频率限制
+            api_manager.smart_delay()  # 使用默认参数以最优化API使用率
+            print(f"Processing paper {processed_papers}/{total_papers}: {title[:50]}...", file=sys.stderr)
+            
+            # 使用带重试机制的函数调用LLM分析论文内容
+            response = invoke_with_retry(title, summary)
 
             # 解析响应
             try:

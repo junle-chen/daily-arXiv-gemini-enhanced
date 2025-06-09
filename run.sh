@@ -37,8 +37,28 @@ TRAJECTORY_LLM_FILE="data/${today}_trajectory_llm.jsonl"
 echo "--- Step 2.1: Filtering papers related to trajectory prediction and large models using LLM ---"
 # 使用与AI增强相同的模型
 MODEL_NAME=${MODEL_NAME:-"gemini-2.0-flash"}
-python filter_papers.py --data ${UNIQUE_JSONL_FILE} -o ${TRAJECTORY_LLM_FILE} --model ${MODEL_NAME} --threshold 0.6
-echo "✅ Filtered data saved to ${TRAJECTORY_LLM_FILE}"
+
+# 添加重试逻辑，最多尝试3次
+max_attempts=3
+attempt=1
+while [ $attempt -le $max_attempts ]; do
+    echo "Attempt $attempt of $max_attempts for filtering papers"
+    if python filter_papers.py --data ${UNIQUE_JSONL_FILE} -o ${TRAJECTORY_LLM_FILE} --model ${MODEL_NAME} --threshold 0.6; then
+        echo "✅ Filtered data saved to ${TRAJECTORY_LLM_FILE}"
+        break
+    else
+        echo "❌ Filtering failed on attempt $attempt"
+        if [ $attempt -lt $max_attempts ]; then
+            echo "Waiting 60 seconds before retrying..."
+            sleep 60
+        else
+            echo "All attempts failed. Continuing workflow without filtered papers."
+            # 创建一个空的筛选文件，以便后续步骤可以继续
+            touch ${TRAJECTORY_LLM_FILE}
+        fi
+    fi
+    attempt=$((attempt+1))
+done
 
 # --- 5. 新增：智能比较今天和昨天的内容 (忽略行序) ---
 echo "--- Step 3: Checking for new content (ignoring line order) ---"
@@ -62,15 +82,60 @@ fi
 # --- 6. 运行 AI 增强脚本 ---
 echo "--- Step 4: Enhancing data with AI ---"
 # 确保它的输入是去重后的文件
-python ai/enhance.py --data ${UNIQUE_JSONL_FILE}
-echo "✅ AI enhancement complete. Output is ${ENHANCED_JSONL_FILE}"
+
+# 添加重试逻辑，最多尝试3次
+max_attempts=3
+attempt=1
+while [ $attempt -le $max_attempts ]; do
+    echo "Attempt $attempt of $max_attempts for enhancing data"
+    if python ai/enhance.py --data ${UNIQUE_JSONL_FILE}; then
+        echo "✅ AI enhancement complete. Output is ${ENHANCED_JSONL_FILE}"
+        break
+    else
+        echo "❌ Enhancement failed on attempt $attempt"
+        if [ $attempt -lt $max_attempts ]; then
+            echo "Waiting 120 seconds before retrying..."
+            sleep 120
+        else
+            echo "All attempts failed. Cannot continue without enhanced data."
+            exit 1
+        fi
+    fi
+    attempt=$((attempt+1))
+done
 
 # --- 新增: 为轨迹预测和大模型数据生成增强内容 ---
 TRAJECTORY_LLM_ENHANCED_FILE="data/${today}_trajectory_llm_AI_enhanced_Chinese.jsonl"
 TRAJECTORY_LLM_MD_FILE="data/${today}_trajectory_llm.md"
 echo "--- Step 4.1: Enhancing trajectory prediction and large model data with AI ---"
-python ai/enhance.py --data ${TRAJECTORY_LLM_FILE}
-echo "✅ AI enhancement for trajectory prediction papers complete. Output is ${TRAJECTORY_LLM_ENHANCED_FILE}"
+
+# 检查轨迹预测数据文件是否存在且非空
+if [ -s "${TRAJECTORY_LLM_FILE}" ]; then
+    # 添加重试逻辑，最多尝试3次
+    max_attempts=3
+    attempt=1
+    while [ $attempt -le $max_attempts ]; do
+        echo "Attempt $attempt of $max_attempts for enhancing trajectory data"
+        if python ai/enhance.py --data ${TRAJECTORY_LLM_FILE}; then
+            echo "✅ AI enhancement for trajectory prediction papers complete. Output is ${TRAJECTORY_LLM_ENHANCED_FILE}"
+            break
+        else
+            echo "❌ Trajectory enhancement failed on attempt $attempt"
+            if [ $attempt -lt $max_attempts ]; then
+                echo "Waiting 120 seconds before retrying..."
+                sleep 120
+            else
+                echo "All attempts failed. Continuing without enhanced trajectory data."
+                # 创建一个空文件以便后续步骤可以继续
+                touch ${TRAJECTORY_LLM_ENHANCED_FILE}
+            fi
+        fi
+        attempt=$((attempt+1))
+    done
+else
+    echo "⚠️ Trajectory prediction data file is empty or doesn't exist. Skipping enhancement."
+    touch ${TRAJECTORY_LLM_ENHANCED_FILE}
+fi
 
 # --- 7. 运行 Markdown 生成脚本 ---
 echo "--- Step 5: Converting JSONL to Markdown ---"

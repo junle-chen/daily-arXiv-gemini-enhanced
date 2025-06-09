@@ -1,0 +1,9 @@
+scrapy>=2.8.0
+langchain>=0.0.235
+langchain_google_genai>=0.0.4
+google-generativeai>=0.3.0
+python-dotenv>=1.0.0
+tqdm>=4.65.0
+weasyprint>=60.0
+zoneinfo>=0.2.1; python_version < '3.9'
+tenacity>=8.0.0
