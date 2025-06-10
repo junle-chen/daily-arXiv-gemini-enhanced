@@ -2,37 +2,21 @@
 set -e
 
 echo "🚀 Starting Daily ArXiv Update Workflow..."
-# 此脚本负责:
-# 1. 抓取最新的论文数据
-# 2. 过滤出与轨迹预测和大模型相关的论文
-# 3. 提取出数据库相关(cs.DB)的论文
-# 4. 为轨迹预测和大模型相关论文生成AI增强内容
-# 5. 分别生成轨迹预测/大模型和数据库相关论文的Markdown报告
-# 6. 更新README文件
 
-# --- 1. 使用北京时区获取正确的当天日期 ---
-today=$(TZ=Asia/Shanghai date "+%Y-%m-%d")
-# 在 macOS 上用不同的方法获取昨天的日期
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    # macOS 方式
-    yesterday=$(TZ=Asia/Shanghai date -v -1d "+%Y-%m-%d")
-else
-    # Linux 方式
-    yesterday=$(TZ=Asia/Shanghai date -d "yesterday" "+%Y-%m-%d")
-fi
-echo "✅ Workflow date set to: ${today} (Asia/Shanghai)"
+# --- 测试脚本：使用固定的测试数据 ---
+today="test-run"
+yesterday="2025-06-07"
+echo "✅ Test workflow using fixed date: ${today}"
 
 # --- 2. 定义所有文件名 ---
-RAW_JSONL_FILE="data/${today}.jsonl"
-UNIQUE_JSONL_FILE="data/${today}_unique.jsonl"
+
+RAW_JSONL_FILE="data/2025-06-07.jsonl"
+UNIQUE_JSONL_FILE="data/2025-06-07_unique.jsonl"
 YESTERDAY_UNIQUE_FILE="data/${yesterday}_unique.jsonl"
 ENHANCED_JSONL_FILE="data/${today}_unique_AI_enhanced_Chinese.jsonl"
 FINAL_MD_FILE="data/${today}.md"
 
-# --- 3. 运行 Scrapy 爬虫 ---
-echo "--- Step 1: Crawling data from ArXiv ---"
-(cd daily_arxiv && scrapy crawl arxiv -o ../${RAW_JSONL_FILE})
-echo "✅ Raw data saved to ${RAW_JSONL_FILE}"
+# 去掉爬虫部分，加快测试速度
 
 # --- 4. 运行去重脚本 ---
 echo "--- Step 2: Deduplicating raw data ---"
@@ -65,7 +49,7 @@ if [ -f "$YESTERDAY_UNIQUE_FILE" ]; then
     # 如果两个排序后的 id 列表没有差异，diff 命令的输出就是空的
     if [ -z "$(diff <(grep -o '"id": "[^"]*"' "$UNIQUE_JSONL_FILE" | sort) <(grep -o '"id": "[^"]*"' "$YESTERDAY_UNIQUE_FILE" | sort))" ]; then
         echo "ℹ️  No new papers found. The set of papers is the same as yesterday. Exiting workflow."
-        rm "$RAW_JSONL_FILE" "$UNIQUE_JSONL_FILE"
+        # rm "$RAW_JSONL_FILE" "$UNIQUE_JSONL_FILE"
         exit 0
     else
         echo "✅ New content found. Proceeding with the workflow."
@@ -135,7 +119,7 @@ fi
 
 # 处理数据库相关数据
 DB_MD_FILE="data/${today}_database.md"
-if [ -s "${DB_ENHANCED_FILE}" ]; then
+if [ -s "${DB_FILE}" ]; then
     python to_md/convert.py --data ${DB_ENHANCED_FILE} --output ${DB_MD_FILE}
     echo "✅ Markdown report for database papers generated at ${DB_MD_FILE}"
 else
@@ -148,4 +132,4 @@ echo "--- Step 7: Updating main README.md ---"
 python update_readme.py
 echo "✅ README.md updated."
 
-echo "🎉 Workflow finished successfully!"
+echo "🎉 Test workflow finished successfully!"

@@ -94,40 +94,45 @@ def main():
         stop=stop_after_attempt(5),  # 最多尝试5次
         wait=wait_exponential(multiplier=1, min=4, max=60),  # 指数退避策略
         retry=retry_if_exception_type(
-            (ResourceExhausted, InternalServerError, ServiceUnavailable, APITimeoutError)
+            (
+                ResourceExhausted,
+                InternalServerError,
+                ServiceUnavailable,
+                APITimeoutError,
+            )
         ),
     )
     def invoke_with_retry(title, summary, timeout_seconds=120):
         """使用超时保护调用LLM API"""
         print(f"📤 发送请求到模型 (标题: '{title[:30]}...')", file=sys.stderr)
-        
+
         # 使用线程超时机制
         def invoke_llm():
             return llm.invoke(prompt_template.format(title=title, summary=summary))
-            
+
         result = [None]
         error = [None]
-        
+
         def worker():
             try:
                 result[0] = invoke_llm()
             except Exception as e:
                 error[0] = e
-        
+
         thread = threading.Thread(target=worker)
         thread.daemon = True
         start_time = time.time()
         thread.start()
         thread.join(timeout_seconds)
         elapsed = time.time() - start_time
-        
+
         if thread.is_alive():
             print(f"⚠️ API调用超时 ({timeout_seconds}秒)", file=sys.stderr)
             raise APITimeoutError(f"API调用超时（超过{timeout_seconds}秒）")
         if error[0] is not None:
             print(f"⚠️ API调用错误: {error[0]}", file=sys.stderr)
             raise error[0]
-            
+
         print(f"✓ API响应成功 (用时: {elapsed:.1f}秒)", file=sys.stderr)
         return result[0]
 
@@ -292,6 +297,7 @@ def main():
 # 添加超时处理类和函数
 class APITimeoutError(Exception):
     """API调用超时异常"""
+
     pass
 
 
@@ -304,18 +310,18 @@ def call_with_timeout(func, args=(), kwargs={}, timeout_seconds=60):
     """使用线程超时机制调用函数（适用于所有平台）"""
     result = [None]
     error = [None]
-    
+
     def worker():
         try:
             result[0] = func(*args, **kwargs)
         except Exception as e:
             error[0] = e
-    
+
     thread = threading.Thread(target=worker)
     thread.daemon = True
     thread.start()
     thread.join(timeout_seconds)
-    
+
     if thread.is_alive():
         return None, APITimeoutError(f"API调用超时（超过{timeout_seconds}秒）")
     if error[0] is not None:

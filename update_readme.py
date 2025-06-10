@@ -22,17 +22,23 @@ def main():
         # 获取所有 .md 文件
         all_md_files = [f for f in os.listdir(data_dir) if f.endswith(".md")]
 
-        # 将文件分为两类：常规和轨迹预测+大模型
+        # 将文件分为三类：常规、轨迹预测+大模型、数据库相关
         trajectory_llm_files = [
             f
             for f in all_md_files
             if "_trajectory_llm" in f or "_trajectory_and_large_models" in f
         ]
-        regular_md_files = [f for f in all_md_files if f not in trajectory_llm_files]
+        database_files = [f for f in all_md_files if "_database" in f]
+        regular_md_files = [
+            f
+            for f in all_md_files
+            if f not in trajectory_llm_files and f not in database_files
+        ]
 
-        # 对两类文件分别排序
+        # 对三类文件分别排序
         regular_md_files = sorted(regular_md_files, reverse=True)
         trajectory_llm_files = sorted(trajectory_llm_files, reverse=True)
+        database_files = sorted(database_files, reverse=True)
     except FileNotFoundError:
         print(f"❌ Error: The '{data_dir}' directory was not found.")
         return
@@ -58,13 +64,27 @@ def main():
         line = content_template.format(date=base_name, url=file_url)
         content_lines.append(line)
 
+    # 添加数据库论文区域标题（如果有数据库论文）
+    if database_files:
+        content_lines.append("\n### 数据库相关论文")
+
+        # 处理数据库相关论文
+        for file_name in database_files:
+            # 从文件名中提取日期
+            base_name = file_name.split("_")[0]
+            file_url = join(data_dir, file_name).replace("\\", "/")
+            line = content_template.format(date=base_name, url=file_url)
+            content_lines.append(line)
+
     # 添加常规论文区域标题（如果有常规论文）
     if regular_md_files:
         content_lines.append("\n### 常规分类论文")
 
         # 处理常规论文
         for file_name in regular_md_files:
-            if "_trajectory_llm" not in file_name:  # 确保不包含轨迹预测文件
+            if (
+                "_trajectory_llm" not in file_name and "_database" not in file_name
+            ):  # 确保不包含特殊分类文件
                 # 从文件名中提取日期
                 base_name = file_name.split(".")[0]
                 file_url = join(data_dir, file_name).replace("\\", "/")
