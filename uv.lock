@@ -221,6 +221,7 @@ dependencies = [
     { name = "langchain-openai" },
     { name = "pydantic" },
     { name = "scrapy" },
+    { name = "tenacity" },
 ]
 
 [package.metadata]
@@ -232,6 +233,7 @@ requires-dist = [
     { name = "langchain-openai", specifier = ">=0.3.9" },
     { name = "pydantic" },
     { name = "scrapy", specifier = ">=2.12.0" },
+    { name = "tenacity", specifier = ">=8.0.0" },
 ]
 
 [[package]]
