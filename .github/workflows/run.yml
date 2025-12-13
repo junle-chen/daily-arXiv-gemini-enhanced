@@ -3,8 +3,8 @@
 name: arXiv-daily-ai-enhanced
 
 on:
-  schedule:
-    - cron: "30 16 * * *"
+  # schedule:
+  #   - cron: "30 16 * * *"
   # 允许手动触发
   workflow_dispatch:
 
